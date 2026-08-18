@@ -277,6 +277,10 @@ and negative-test restoration:
 bash tests/run.sh
 ```
 
+## License
+
+[MIT](LICENSE) © 2026 Addy Osmani.
+
 ## Further reading
 
 Start with Dex Horthy's software-factory playbook,
