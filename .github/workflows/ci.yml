@@ -1,0 +1,33 @@
+name: Validate factory
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check shell syntax
+        shell: bash
+        run: |
+          bash -n \
+            install.sh \
+            template/.claude/hooks/*.sh \
+            template/.claude/scripts/*.sh \
+            template/.factory/scripts/*.sh \
+            tests/*.sh
+
+      - name: Check JSON configuration
+        run: jq empty template/.claude/settings.json template/.codex/hooks.json
+
+      - name: Run factory tests
+        run: bash tests/run.sh
