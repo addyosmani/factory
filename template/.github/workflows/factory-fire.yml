@@ -1,0 +1,73 @@
+# OPTIONAL. Only add this if you want issue-driven triage to be immediate.
+#
+# Why this file exists: Claude Code routines support GitHub triggers for
+# `pull_request` and `release` events ONLY. There is no `issues` trigger. So the
+# canonical factory flow (new issue -> triage agent) cannot be event-driven with a
+# stock routine alone.
+#
+# Two ways to close that gap:
+#
+#   A. Scheduled routine that polls for untriaged issues.  <- default, fully stock,
+#      zero extra files, up to an hour of latency. Start here.
+#
+#   B. This file: a GitHub Action that POSTs to a routine's API trigger the moment
+#      an issue is opened. Near-instant, costs one YAML file and one secret.
+#
+# Use B only if triage latency actually matters to you. For a personal or greenfield
+# repo it almost never does, and A keeps the factory to zero non-stock parts.
+#
+# Setup for B:
+#   1. Create the triage routine at claude.ai/code/routines (see ROUTINES.md).
+#   2. Edit it, add an API trigger, generate a token. The token is shown once.
+#   3. Add repo secrets:
+#        CLAUDE_ROUTINE_URL    the /fire endpoint URL for that routine
+#        CLAUDE_ROUTINE_TOKEN  the bearer token
+#   4. Commit this file.
+#
+# Note on the routine prompt: `text` sent here arrives wrapped in a
+# <routine-fire-payload> block explicitly labelled as untrusted data. The routine's
+# saved prompt must reference the payload for it to be acted on at all. That wrapper
+# is a feature: anyone holding the token can send text, so it arrives as data rather
+# than as instructions. Do not try to defeat it.
+
+name: factory-fire
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  fire:
+    runs-on: ubuntu-latest
+    # Skip issues the factory itself filed, or the monitor loops on its own output.
+    if: ${{ !contains(github.event.issue.labels.*.name, 'factory:monitor') }}
+    steps:
+      - name: Trigger triage routine
+        env:
+          URL: ${{ secrets.CLAUDE_ROUTINE_URL }}
+          TOKEN: ${{ secrets.CLAUDE_ROUTINE_TOKEN }}
+          NUMBER: ${{ github.event.issue.number }}
+          TITLE: ${{ github.event.issue.title }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$TOKEN" ]; then
+            echo "Routine secrets not configured; skipping. Scheduled triage will pick this up."
+            exit 0
+          fi
+
+          # Pass only the identifier. The routine fetches the issue itself with the
+          # built-in GitHub tools, so untrusted issue body text never travels as the
+          # payload and the routine reads it in its normal, guarded way.
+          PAYLOAD=$(jq -nc --arg t "Triage issue #${NUMBER} (\"${TITLE}\") in ${REPO}." '{text:$t}')
+
+          curl -sS -X POST "$URL" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "anthropic-beta: experimental-cc-routine-2026-04-01" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            --fail-with-body
