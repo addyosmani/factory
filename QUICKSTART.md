@@ -1,6 +1,11 @@
-# Quickstart
+# Claude cloud quickstart
 
 About 30 minutes. Do it on a `greenfield` repo first, not a client one.
+
+This guide starts where the desktop tutorial ends. If you have not yet installed the
+template, configured the charter, and seen green local gates, begin with
+[GETTING_STARTED.md](GETTING_STARTED.md). Return here when you are ready to add Claude cloud
+sessions and routines.
 
 ## 0. Prerequisites
 

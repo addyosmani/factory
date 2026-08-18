@@ -1,4 +1,4 @@
-# Reference software factory
+# Factory: a reference software factory
 
 A working software factory built from **stock Claude Code and a subscription that includes
 Claude Code on the web**. No orchestrator, no queue service, no vendor platform. A thin
@@ -8,13 +8,30 @@ The Claude path runs on committed skills and subagents, cloud routines, cloud se
 gate script, and defense-in-depth hooks. Codex reads `AGENTS.md`, repo-scoped skills, and a
 repo hook without introducing a second factory definition.
 
+## Start here
+
+This repository is an installer for another project. Clone it, run `install.sh` against the
+repository you want to automate, then open that target repository in your coding agent.
+
+- **Starting from a desktop app?** Follow [GETTING_STARTED.md](GETTING_STARTED.md). It has
+  separate Claude Code Desktop and Codex/ChatGPT Desktop walkthroughs, including the first
+  prompts to paste and the checks to run before enabling writes.
+- **Ready for Claude cloud sessions and routines?** Follow
+  [QUICKSTART.md](QUICKSTART.md) after the local desktop dry run is predictable.
+- **Evaluating the design first?** Read [ARCHITECTURE.md](ARCHITECTURE.md) and the honest
+  product constraints in [LIMITS.md](LIMITS.md).
+
 ```
-reference-software-factory/
+factory/
 ├── README.md            <- you are here
-├── QUICKSTART.md        30 minutes, first repo
+├── GETTING_STARTED.md   desktop-first local setup
+├── QUICKSTART.md        Claude cloud sessions and routines
 ├── ARCHITECTURE.md      why it is shaped this way
 ├── ROUTINES.md          the five routine prompts, copy verbatim
 ├── LIMITS.md            honest constraints + corrections to the common plan
+├── CONTRIBUTING.md      change map and validation expectations
+├── CLAUDE.md            Claude Code contributor instructions
+├── AGENTS.md            Codex contributor instructions
 ├── install.sh
 ├── tests/               disposable-repo smoke tests
 └── template/            shared contract plus Claude Code and Codex adapters
@@ -23,12 +40,14 @@ reference-software-factory/
 ## Install
 
 ```bash
+git clone https://github.com/addyosmani/factory.git
 cd /path/to/your/repo
-/path/to/reference-software-factory/install.sh
+/path/to/factory/install.sh --dry-run .
+/path/to/factory/install.sh .
 ```
 
-Then read [QUICKSTART.md](QUICKSTART.md). It never overwrites an existing file, so re-running
-is safe.
+Then read [GETTING_STARTED.md](GETTING_STARTED.md). The installer never overwrites an
+existing file, so re-running it is safe.
 
 ---
 

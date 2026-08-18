@@ -16,6 +16,7 @@ for path in \
   .claude/scripts/gates.sh \
   .agents/skills/factory-implement/SKILL.md \
   .codex/hooks.json \
+  docs/factory/README.md \
   docs/factory/CONTRACT.md \
   docs/factory/runs/README.md; do
   [ -e "$fixture/$path" ] || { echo "missing installed file: $path" >&2; exit 1; }

@@ -23,6 +23,7 @@ Keep this short and specific. Vague style guidance produces vague code.>
 This repository runs a software factory. Read `docs/factory/CONTRACT.md`, then
 `docs/factory/CHARTER.md`, before acting. The contract is shared with Codex through
 `AGENTS.md`; it is the source of truth for queue semantics and non-negotiable rules.
+For first-time setup and the local dry run, follow `docs/factory/README.md`.
 
 ## Read first
 

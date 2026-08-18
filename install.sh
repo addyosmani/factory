@@ -75,6 +75,8 @@ cat <<'EOF'
 
 Next, in order:
 
+  Setup guide: docs/factory/README.md
+
   1. docs/factory/CHARTER.md
      Set TIER, LOAD_BEARING globs, and AUTOMATABLE. This is the only step that
      decides what work the factory may attempt; set CHARTER_STATUS to ready only
