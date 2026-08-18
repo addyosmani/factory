@@ -1,12 +1,156 @@
 # Factory: a reference software factory
 
-A working software factory built from **stock Claude Code and a subscription that includes
-Claude Code on the web**. No orchestrator, no queue service, no vendor platform. A thin
-Codex adapter uses the same contract, queue, gates, and evidence files.
+A software factory is a repeatable loop around software delivery. Instead of opening a new
+agent session for every issue and steering it by hand, you define what work may be attempted,
+how work starts, what evidence must be produced, and where a human must make the decision.
 
-The Claude path runs on committed skills and subagents, cloud routines, cloud sessions, one
-gate script, and defense-in-depth hooks. Codex reads `AGENTS.md`, repo-scoped skills, and a
-repo hook without introducing a second factory definition.
+This repository installs that operating model into an existing GitHub project using stock
+Claude Code. A thin Codex adapter uses the same policy, queue, gates, and evidence files.
+There is no custom orchestrator or queue service to run.
+
+**In practical terms:** GitHub Issues become a work queue. Scheduled agents triage the
+queue, implement bounded tasks, run your real tests, obtain an independent review, and open
+draft pull requests. Humans remain responsible for ambiguous requirements, system design,
+load-bearing changes, and every merge.
+
+## What this gives you
+
+Once configured, the factory can:
+
+- inspect new GitHub issues and route each one to implementation, specification, a named
+  question, or a known blocker
+- pick up small work that your charter explicitly allows, claim it without racing another
+  run, implement it on a branch, and open a draft pull request
+- run deterministic type, lint, test, build, audit, and architecture checks, failing closed
+  when a required check is missing
+- ask a fresh verifier to read the diff cold and prove that the new test fails without the
+  implementation
+- verify pull requests when they open, keep a visible review queue, and stop producing when
+  that queue reaches your limit
+- monitor the default branch and factory health, then feed findings back into GitHub as new
+  issues
+
+The value begins after code generation. This is a version-controlled method for deciding
+what an agent may pick up unattended, how independent runs hand work to one another, and
+what proof a human receives before making the final call.
+
+## The mental model
+
+There is no background factory process in this repository. The repository supplies the
+rules and procedures. Claude Code cloud routines provide the default clock and compute.
+GitHub carries the durable queue and pull requests. Each run starts fresh, handles one
+stage, records evidence, and stops.
+
+| Factory concept | Concrete mechanism |
+|---|---|
+| Intent and risk budget | A human-owned `docs/factory/CHARTER.md` |
+| Work queue | GitHub Issues with `factory:*` labels |
+| Handoff between stages | A structured `factory-handoff:v1` issue comment |
+| Standard operating procedures | Version-controlled Claude and Codex skills |
+| Clock and triggers | Claude routines, schedules, GitHub events, or the optional API-trigger Action |
+| Worker | A fresh Claude Code or Codex session |
+| Quality control | Your test commands, `gates.sh`, and an independent verifier |
+| Control room | `/factory`, backed by live issues, PRs, and run records |
+| Release authority | A human reviewing and merging the pull request |
+
+Each loop is short and restartable. Broad goals are decomposed into queue items that one run
+can claim and finish. GitHub labels and committed files survive when sessions end, making a
+failed run inspectable and allowing the next run, or a different harness, to continue
+without relying on conversation history.
+
+## How an issue becomes a reviewed pull request
+
+```mermaid
+flowchart LR
+    I["GitHub issue"] --> T["Scheduled triage"]
+    T -->|"small and allowed"| R["ready-to-implement"]
+    T -->|"needs decisions"| S["ready-to-spec"]
+    T -->|"blocked or unclear"| P["needs-info / wait"]
+    S --> H["Human-guided spec"]
+    H --> R
+    R --> B["Implementation run"]
+    B --> G["Gates + fresh verifier"]
+    G --> D["Draft pull request"]
+    D --> V["PR verification"]
+    V --> C["/factory control room"]
+    C --> M{"Human decision"}
+    M -->|"merge"| X["Ship"]
+    M -->|"revise or close"| D
+    X --> W["Weekly monitor"]
+    W --> I
+```
+
+For example, suppose issue `#142` reports that expired tokens return `500` instead of
+`401`:
+
+1. The scheduled triage routine reads the issue, checks the charter, and decides whether it
+   is small and permitted. It applies one queue label and writes a handoff containing the
+   expected files, completion condition, gate level, and confidence.
+2. If the issue is `factory:ready-to-implement`, a later implementation run claims the
+   deterministic branch `claude/fq-142`. Only the first push wins, so two scheduled sessions
+   cannot both own the issue.
+3. The implementation run writes a failing test, makes the scoped change, runs the required
+   gates, and delegates to a fresh verifier. It opens a draft PR only if those checks agree.
+4. Opening the PR can trigger a separate verification routine. That routine reruns the gates,
+   checks scope, and leaves a verdict on the PR.
+5. `/factory` shows the PR in the human review queue. A person reads the evidence and decides
+   whether to request changes, close it, or merge it. No routine merges.
+
+If triage cannot infer product intent, the issue goes to `factory:ready-to-spec` and the spec
+workflow pauses at four explicit human approval gates. If it needs a missing fact, the issue
+is parked with the question rather than converted into speculative code.
+
+### Where the human stays in the loop
+
+The factory automates repeated mechanical steering while keeping engineering judgment with
+a person. That person still:
+
+- writes the charter that defines risk, scope, protected paths, and the review-queue limit
+- approves product intent, observable behavior, technical design, and implementation slices
+  for work that needs a spec
+- reads changes to load-bearing code and any change to an existing test
+- decides whether every pull request should merge
+- accepts or rejects proposed changes to the factory's own constraints
+
+Agents may classify issues, move queue labels, implement permitted work, run checks, and open
+draft PRs. They may not quietly widen their scope, rewrite the charter, approve their own
+work, or merge. GitHub branch protection is the final enforcement boundary.
+
+### How work starts from GitHub
+
+One current product limit matters to the first arrow in the diagram:
+[Claude routines](https://code.claude.com/docs/en/routines) have native GitHub triggers for
+pull requests and releases, but not for newly created issues.
+This reference uses an hourly scheduled triage routine to poll for untriaged issues. That is
+the simplest reliable default and means an issue may wait until the next run.
+
+If you need immediate triage, install the optional GitHub Action. It reacts to the issue
+event and calls the triage routine's API endpoint. Pull-request verification can use the
+native `pull_request.opened` trigger. [LIMITS.md](LIMITS.md) documents the trigger boundary
+and the tradeoff in detail.
+
+## Where Claude Code and Codex fit
+
+The factory method is shared; the unattended automation is Claude-first in this reference.
+
+| Capability | Claude Code | Codex |
+|---|---|---|
+| Project policy | `CLAUDE.md` plus the shared charter and contract | `AGENTS.md` plus the same charter and contract |
+| Repeatable stages | Canonical skills under `.claude/skills/` | Thin adapters under `.agents/skills/` |
+| Interactive triage, spec, implementation, and status | Yes | Yes |
+| Deterministic gates and GitHub queue | Shared | Shared |
+| Unattended schedule supplied by this repository | Five prompts for Claude cloud routines | Not provisioned automatically |
+| Native GitHub trigger used here | Pull-request verification | Not packaged by this reference |
+
+Codex can run the same stages interactively, or you can map them to Codex goals and
+automation surfaces available to you. The repository does not create those schedules or
+claim that their lifecycle matches Claude routines. Whichever harness starts a run, GitHub
+labels remain the queue and the shared contract remains the policy.
+
+Codex reads [`AGENTS.md`](https://learn.chatgpt.com/docs/agent-configuration/agents-md),
+discovers [repository skills](https://learn.chatgpt.com/docs/build-skills), and can load the
+committed [repository hook](https://learn.chatgpt.com/docs/hooks). The adapters point back
+to the canonical Claude workflows rather than maintaining a second implementation.
 
 ## Start here
 
@@ -51,7 +195,7 @@ existing file, so re-running it is safe.
 
 ---
 
-## What you get
+## What gets installed
 
 | Piece | File | Does |
 |---|---|---|
@@ -71,49 +215,6 @@ existing file, so re-running it is safe.
 | **Tuning** | `/factory-tune` | Monthly constraint review, proposes only |
 | **Merge guard** | `.claude/hooks/block-merge.sh` | Blocks common shell merge paths; GitHub rules remain the enforcement boundary |
 | **Doctor** | `.factory/scripts/doctor.sh` | Finds placeholders, missing labels, missing remotes, and setup gaps |
-
-## The pipeline
-
-```
-issue ──▶ TRIAGE ──▶ ready label ──▶ claim branch ──▶ IMPLEMENT ──▶ VERIFIER ──▶ draft PR ──▶ ┐
- (cloud, scheduled)    │                     (cloud)      (subagent)                │
-                       ├─▶ ready-to-spec ──▶ SPEC ──▶ slices ───────────────────────┤
-                       │                    (desktop, 4 human gates)                │
-                       ├─▶ needs-info ─────▶ parked, question on the issue          │
-                       └─▶ wait-to-impl ───▶ parked, blocker named                  │
-                                                                                    ▼
-       MONITOR ◀── ship ◀── HUMAN MERGES ◀── /factory ◀── VERIFY ◀────────────── PR opened
-   (weekly, files issues)   (never automated)  (control room)  (cloud, on PR event)
-```
-
-Two stages are deliberately not automatable. **Spec** is where product intent and system
-shape get decided, and no oracle grades those. **Ship** is where accountability lives.
-
-## Desktop and cloud
-
-Both, from the same committed files. Cloud sessions clone the repo, so whatever is in
-`.claude/` works identically everywhere.
-
-| | Desktop / CLI | Cloud |
-|---|---|---|
-| Control room | `/factory` | - |
-| Spec gates | **here**, interactive | no |
-| Fan out | `claude --cloud "..."` × N | each its own session |
-| Track | `/tasks` | claude.ai/code, mobile app |
-| Take over | `claude --teleport` | - |
-| Steer without attaching | `claude -p "..." --cloud <id>` | - |
-| Unattended | Local routines (needs machine awake) | **Cloud routines** |
-| Watch a PR | `/autofix-pr` | web session |
-
-The highest-value pattern, and the one that makes the whole thing work:
-
-```bash
-claude --permission-mode plan     # think it through locally, no edits
-# save the plan into the repo, commit, push
-claude --cloud "Execute the plan in docs/factory/specs/FQ-150/04-slices.md"
-```
-
-Judgment upstream, execution unattended.
 
 ---
 
@@ -162,22 +263,6 @@ Read [LIMITS.md](LIMITS.md). The headline:
   without an infrastructure error.
 - **Environment variables are not secrets.** Leave `GH_TOKEN` unset; the GitHub proxy
   handles auth and keeps the credential out of the VM.
-
-## Codex compatibility
-
-Codex reads [`AGENTS.md`](https://learn.chatgpt.com/docs/agent-configuration/agents-md),
-discovers [repo-scoped skills](https://learn.chatgpt.com/docs/build-skills) under
-`.agents/skills/`, and can load the defense-in-depth
-[hook](https://learn.chatgpt.com/docs/hooks) from `.codex/hooks.json`. The wrappers point
-back to the same Claude-first workflows and shared contract, so policy and state do not
-fork by harness.
-
-Codex users review and trust the repository hook with `/hooks`. The contract, gate script,
-issue labels, and run records still work when the hook is disabled.
-
-The saved cloud routines in `ROUTINES.md` remain Claude-specific. Codex can run the same
-skills interactively or through its own automation surfaces, but this reference does not
-pretend the two schedulers have identical triggers or lifecycle semantics.
 
 LIMITS.md §7 also corrects the widely circulated build plan point by point. The load-bearing
 error in that plan is the issue trigger, because it is the first stage of the pipeline.
