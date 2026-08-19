@@ -157,6 +157,10 @@ to the canonical Claude workflows rather than maintaining a second implementatio
 This repository is an installer for another project. Clone it, run `install.sh` against the
 repository you want to automate, then open that target repository in your coding agent.
 
+- **Want to see the full loop first?** Explore the
+  [Reel Good demo](https://github.com/addyosmani/factory-demo), then follow its
+  [step-by-step workshop](https://github.com/addyosmani/factory-demo/blob/main/docs/WORKSHOP.md)
+  to apply Factory to a small TMDB movie app with Claude Code Desktop or Codex.
 - **Starting from a desktop app?** Follow [GETTING_STARTED.md](GETTING_STARTED.md). It has
   separate Claude Code Desktop and Codex/ChatGPT Desktop walkthroughs, including the first
   prompts to paste and the checks to run before enabling writes.
