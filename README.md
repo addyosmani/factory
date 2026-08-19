@@ -157,6 +157,9 @@ to the canonical Claude workflows rather than maintaining a second implementatio
 This repository is an installer for another project. Clone it, run `install.sh` against the
 repository you want to automate, then open that target repository in your coding agent.
 
+- **Deciding how much machinery you need?** Read [ADVICE.md](ADVICE.md) for a pragmatic
+  guide to starting with stock Claude Code or Codex, budgeting verification, and knowing
+  when this Factory reference earns its additional structure.
 - **Want to see the full loop first?** Explore the
   [Reel Good demo](https://github.com/addyosmani/factory-demo), then follow its
   [step-by-step workshop](https://github.com/addyosmani/factory-demo/blob/main/docs/WORKSHOP.md)
@@ -172,6 +175,7 @@ repository you want to automate, then open that target repository in your coding
 ```
 factory/
 ├── README.md            <- you are here
+├── ADVICE.md            when the harness is enough, and when Factory helps
 ├── GETTING_STARTED.md   desktop-first local setup
 ├── QUICKSTART.md        Claude cloud sessions and routines
 ├── ARCHITECTURE.md      why it is shaped this way
