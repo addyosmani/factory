@@ -153,7 +153,32 @@ fail-closed gates, run records, and five Claude routines.
 
 ---
 
-## 8. What this reference deliberately does not do
+## 8. The negative-test proof cannot judge a brand-new module
+
+`.factory/scripts/prove-test.sh` reverses the non-test hunks of a change and re-runs the
+test. If the test fails, it exercised something the implementation provides.
+
+That inference only holds when the test still *runs* without the fix. For the most common
+factory change shape - a new module plus a test that imports it - reverting deletes the
+module, so the test fails to load. An assertion-free test and a real one produce the same
+import error, and the script cannot tell them apart. Since August 2026 it reports
+`status=UNPROVEN reason=test-could-not-load` in that case rather than `PROVEN`, and the
+verifier records `test_proves_fix: could-not-determine` and accepts with reservations,
+which flags the PR for a human read.
+
+The practical consequences:
+
+- Bug fixes to existing code get a real proof. New modules get an honest "cannot tell".
+- A test command that fails silently, printing nothing a runner would recognise as a
+  failure, also reports `UNPROVEN` - `reason=failure-not-classified`. Prefer a real test
+  runner over a bare shell predicate for anything the factory will be asked to prove.
+- Nothing here substitutes for reading the test. Mutation testing is the tool that
+  actually answers "does this assertion mean anything", which is why the `mutation` gate
+  exists at `deep`.
+
+---
+
+## 9. What this reference deliberately does not do
 
 - **No auto-merge on any tier.** Enforced by repository branch rules; hooks add defense in depth.
 - **No ROI or token dashboard.** Nothing stock emits the data; building it is a project.
