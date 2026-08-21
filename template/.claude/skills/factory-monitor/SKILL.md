@@ -42,6 +42,14 @@ as supporting history:
      and per the charter's `STOP_IF` the factory should be throttling intake
    - `wait-to-implement` whose named blocker has since resolved → promote it
    - `needs-info` with an answer now in the issue comments → send back to triage
+   - a `claude/fq-<n>` remote branch whose issue is **not** `in-progress` → an orphaned
+     claim. This is the one staleness case nothing else can see: the item looks like a
+     healthy queued entry, but every implementation run that selects it loses the push race
+     to the abandoned ref and stops. Report the branch and the issue by name so a human can
+     delete the ref
+   - `awaiting-review` on an issue with no open pull request → the PR was closed without
+     merging, or was merged without a `Closes` line, and the item is now permanently
+     occupying a back-pressure slot
 
 **5. Comprehension drift.** Files changed by the factory more than 5 times in the last 30
 days with no corresponding update to their documentation or to `docs/factory/DECISIONS.md`.
