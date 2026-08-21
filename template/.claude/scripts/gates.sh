@@ -60,6 +60,7 @@ done
 
 PASSED=0
 FAILED=0
+PASSING=""
 FAILING=""
 SKIPPED=""
 MISCONFIGURED=""
@@ -75,6 +76,7 @@ run() {
   if "$@"; then
     c_green "PASS  $name"
     PASSED=$((PASSED + 1))
+    PASSING="${PASSING}${PASSING:+,}${name}"
   else
     c_red   "FAIL  $name"
     FAILED=$((FAILED + 1))
@@ -207,11 +209,31 @@ if [ "$LEVEL" = "deep" ]; then
   #   c_red "architecture: db/client imported outside src/db"; ARCH_FAIL=1
   # fi
   if [ "$ARCH_FAIL" -eq 0 ]; then
-    c_green "PASS  architecture"; PASSED=$((PASSED + 1))
+    c_green "PASS  architecture"; PASSED=$((PASSED + 1)); PASSING="${PASSING}${PASSING:+,}architecture"
   else
     c_red   "FAIL  architecture"; FAILED=$((FAILED + 1)); FAILING="${FAILING}${FAILING:+,}architecture"
   fi
 fi
+
+# ---------------------------------------------------------------------------
+# CLOSING SWEEP - every required gate must have produced a verdict.
+#
+# A required gate the DETECT block never reaches emits neither run nor skip, so
+# without this sweep it would silently leave the run GREEN. Fail closed instead:
+# a gate that was never attempted is misconfigured, exactly like a required skip.
+# ---------------------------------------------------------------------------
+in_list() {
+  case ",$2," in *",$1,"*) return 0 ;; esac
+  return 1
+}
+
+for gate in $REQUIRED; do
+  if in_list "$gate" "$PASSING" || in_list "$gate" "$FAILING" || in_list "$gate" "$SKIPPED"; then
+    continue
+  fi
+  c_red "MISS  $gate (required at level $LEVEL but never attempted)"
+  MISCONFIGURED="${MISCONFIGURED}${MISCONFIGURED:+,}${gate}"
+done
 
 # ---------------------------------------------------------------------------
 # VERDICT
