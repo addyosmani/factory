@@ -19,12 +19,34 @@ required_files=(
   docs/factory/CONTRACT.md
   docs/factory/CHARTER.md
   .factory/gates.conf
+  .factory/scripts/prove-test.sh
   .claude/scripts/gates.sh
+  .claude/settings.json
+  .claude/hooks/block-merge.sh
 )
 
 for path in "${required_files[@]}"; do
   [ -f "$path" ] && pass "$path exists" || fail "$path is missing"
 done
+
+# install.sh never overwrites, so on a repo that already had .claude/settings.json
+# the deny rules and the hook wiring can be absent while every file is present.
+if [ -f .claude/settings.json ] && grep -q 'block-merge.sh' .claude/settings.json; then
+  pass "block-merge hook is wired into .claude/settings.json"
+else
+  fail "block-merge.sh is not wired as a PreToolUse hook in .claude/settings.json"
+fi
+
+if [ -f .claude/hooks/block-merge.sh ] && [ ! -x .claude/hooks/block-merge.sh ]; then
+  fail ".claude/hooks/block-merge.sh is not executable"
+fi
+
+missing_deny=0
+for rule in 'docs/factory/CHARTER.md' '.factory/gates.conf' '.claude/scripts/gates.sh'; do
+  grep -q "Edit($rule)" .claude/settings.json 2>/dev/null || missing_deny=$((missing_deny + 1))
+done
+[ "$missing_deny" -eq 0 ] && pass "policy files are in the Edit deny list" \
+  || fail "$missing_deny policy files are missing from the Edit deny list in .claude/settings.json"
 
 if [ -f CLAUDE.md ] && grep -q '<PROJECT NAME>\|<install>\|<One paragraph:' CLAUDE.md; then
   fail "CLAUDE.md still contains setup placeholders"

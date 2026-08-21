@@ -18,7 +18,9 @@
       "Edit(.factory/gates.conf)",
       "Edit(AGENTS.md)",
       "Edit(.claude/scripts/gates.sh)",
+      "Edit(.claude/hooks/block-merge.sh)",
       "Edit(.claude/settings.json)",
+      "Edit(.factory/scripts/prove-test.sh)",
       "Edit(.codex/hooks.json)"
     ]
   },

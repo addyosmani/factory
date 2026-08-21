@@ -19,5 +19,20 @@ sed -i.bak 's/CHARTER_STATUS: incomplete/CHARTER_STATUS: ready/; s/TIER: <choose
 rm -f "$fixture/CLAUDE.md.bak" "$fixture/docs/factory/CHARTER.md.bak"
 
 (cd "$fixture" && ./.factory/scripts/doctor.sh >/dev/null)
+
+# install.sh refuses to overwrite, so a repo that already had .claude/settings.json
+# ends up installed but unguarded. Doctor must not call that healthy.
+mv "$fixture/.claude/settings.json" "$fixture/.claude/settings.json.saved"
+printf '{"permissions":{"allow":[],"deny":[]}}\n' > "$fixture/.claude/settings.json"
+set +e
+(cd "$fixture" && ./.factory/scripts/doctor.sh > "$fixture/unguarded.log" 2>&1)
+unguarded_status=$?
+set -e
+[ "$unguarded_status" -ne 0 ]
+grep -q 'block-merge.sh is not wired' "$fixture/unguarded.log"
+grep -q 'missing from the Edit deny list' "$fixture/unguarded.log"
+mv "$fixture/.claude/settings.json.saved" "$fixture/.claude/settings.json"
+
+(cd "$fixture" && ./.factory/scripts/doctor.sh >/dev/null)
 echo "doctor: ok"
 
