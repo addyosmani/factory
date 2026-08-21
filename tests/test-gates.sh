@@ -51,5 +51,24 @@ set -e
 [ "$red_status" -eq 1 ]
 printf '%s' "$red_output" | grep -q 'status=RED'
 
+# A required gate the DETECT block never reaches emits neither run nor skip.
+# gates.conf's own comments invite exactly this ("add build or mutation"), and
+# mutation is gated to deep, so at full it must not silently pass as GREEN.
+write_package true
+cp "$fixture/.factory/gates.conf" "$fixture/.factory/gates.conf.saved"
+printf 'REQUIRED_FULL="types lint test mutation"\n' >> "$fixture/.factory/gates.conf"
+set +e
+unreached_output="$(cd "$fixture" && ./.claude/scripts/gates.sh full 2>&1)"
+unreached_status=$?
+set -e
+[ "$unreached_status" -eq 2 ]
+printf '%s' "$unreached_output" | grep -q 'status=MISCONFIGURED'
+printf '%s' "$unreached_output" | grep -q 'misconfigured=mutation'
+mv "$fixture/.factory/gates.conf.saved" "$fixture/.factory/gates.conf"
+
+# The stock configuration must still be reachable end to end.
+green_again="$(cd "$fixture" && ./.claude/scripts/gates.sh full)"
+printf '%s' "$green_again" | grep -q 'status=GREEN'
+
 echo "gates: ok"
 
