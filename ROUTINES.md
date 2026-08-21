@@ -105,10 +105,12 @@ Read docs/factory/CONTRACT.md, then docs/factory/CHARTER.md. Query GitHub issues
 factory:* labels and read the latest factory-handoff:v1 comment. Do not use QUEUE.md as the
 live handoff. A missing or conflicting handoff moves the issue to factory:needs-info.
 
-First check the stop conditions in the charter. If the number of issues labeled
-factory:awaiting-review is at or above the charter's limit, stop immediately, write a
-unique stopped run record under docs/factory/runs/, and end the run. Do not implement
-anything. A full review queue is the binding constraint on this factory.
+First check the stop conditions in the charter. Count OPEN issues labeled
+factory:awaiting-review plus open issues labeled factory:in-progress; an in-progress item
+is a review that has not arrived yet. If that count is at or above the charter's limit,
+stop immediately, write a unique stopped run record under docs/factory/runs/, and end the
+run. Do not implement anything. A full review queue is the binding constraint on this
+factory.
 
 Otherwise pick exactly ONE issue labeled factory:ready-to-implement, highest confidence
 first. Claim the deterministic remote branch exactly as the skill describes. If the push
@@ -128,9 +130,14 @@ it the queue item, branch name, and verified base SHA only, not your account of 
 returns verdict: rejected, fix what it names and repeat. After two rejections, stop and
 hand the item back.
 
-Open a draft pull request using the template in the skill. Quote the FACTORY_GATES line
-verbatim. Replace factory:in-progress with factory:awaiting-review and write a unique
-implementation run record. Never merge.
+Open a draft pull request using the template in the skill. Include the Closes line so
+merging the PR closes the issue. Quote the FACTORY_GATES line verbatim. Replace
+factory:in-progress with factory:awaiting-review and write a unique implementation run
+record. Never mark the PR ready for review yourself, and never merge.
+
+If the run ends after claiming without opening a PR, delete the remote claim branch
+before moving the issue back to a live label. A surviving claim ref makes the issue
+permanently unclaimable.
 
 If the work turns out to touch a load-bearing path listed in the charter, stop, move the
 item to ready-to-spec with the reason, and end the run.
@@ -141,9 +148,24 @@ item to ready-to-spec with the reason, and end the run.
 ## 3. PR verify
 
 **Trigger:** GitHub event → `pull_request.opened`
-**Filter:** `Is draft` is `false`, or leave unfiltered to cover drafts too
+**Filter:** none. Leave the draft state unfiltered
 **Repos:** your repo
 **Connectors:** none
+
+**Do not filter on `Is draft` is `false`.** Routine 2 opens every factory PR as a draft, so
+that filter means this stage never fires on the work it exists to check - and the failure
+is silent, because a routine that never triggers looks the same as one with nothing to do.
+Every check then runs inside the implementer's own session, and the verbatim
+`FACTORY_GATES:` line in the PR body degrades to a string the writer pasted about itself.
+Writer-grades-writer is the one thing this architecture exists to prevent.
+
+Nor does adding a draft filter plus a promotion event fix it: GitHub emits
+`ready_for_review`, not `opened`, when a draft is promoted, so if your trigger list offers
+that action, add it as a second trigger rather than treating it as a substitute.
+
+If you would rather not rely on webhooks at all, run this stage on a short schedule over
+open PRs labelled `factory:awaiting-review` that carry no verification comment yet.
+Verification running late is recoverable; verification never running is not.
 
 This is the one stage that gets a real event trigger. Requires the
 [Claude GitHub App](https://github.com/apps/claude) installed on the repo. `/web-setup`
