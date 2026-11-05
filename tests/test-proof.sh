@@ -34,4 +34,8 @@ printf '%s' "$false_proof_output" | grep -q 'status=FAILED'
 grep -qx new "$fixture/value.txt"
 [ -z "$(git -C "$fixture" status --short)" ]
 
+default_proof_output="$(cd "$fixture" && "$ROOT/template/.factory/scripts/prove-test.sh" HEAD^ -- bash tests/value-test.sh)"
+printf '%s' "$default_proof_output" | grep -q 'status=PROVEN'
+[ -z "$(git -C "$fixture" status --short)" ]
+
 echo "proof: ok"

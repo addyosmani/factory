@@ -63,7 +63,8 @@ trap restore EXIT INT TERM
 non_test_files=()
 while IFS= read -r -d '' path; do
   is_test=0
-  for test_path in "${test_paths[@]}"; do
+  # bash 3.2 (macOS) treats an empty array as unbound under set -u.
+  for test_path in ${test_paths[@]+"${test_paths[@]}"}; do
     if [ "$path" = "$test_path" ] || [[ "$path" == "$test_path"/* ]]; then
       is_test=1
       break
